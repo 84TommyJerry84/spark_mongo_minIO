@@ -43,6 +43,9 @@ services:
     ports:
       - "${SPARK_MASTER_PORT}:7077"
       - "${SPARK_MASTER_WEBUI_PORT}:8080"
+
+    volumes:
+      - ./spark/jobs:/opt/spark/jobs:ro
     
   spark-worker:
     image: spark:4.1.2-python3
