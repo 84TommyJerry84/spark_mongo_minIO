@@ -36,6 +36,10 @@ services:
     container_name: datalake-spark-master
     hostname: spark-master
 
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+
     command:
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.master.Master
@@ -46,11 +50,15 @@ services:
 
     volumes:
       - ./spark/jobs:/opt/spark/jobs:ro
-    
+
   spark-worker:
     image: spark:4.1.2-python3
     container_name: datalake-spark-worker
     hostname: spark-worker
+
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
 
     command:
       - /opt/spark/bin/spark-class
