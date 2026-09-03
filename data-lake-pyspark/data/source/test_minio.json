@@ -1,0 +1,17 @@
+[
+    {
+        "station": "Bellecour",
+        "velos": 12,
+        "temperature": 22.5
+    },
+    {
+        "station": "Part-Dieu",
+        "velos": 4,
+        "temperature": 18.2
+    },
+    {
+        "station": "Confluence",
+        "velos": 8,
+        "temperature": 25.1
+    }
+]

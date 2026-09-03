@@ -19,7 +19,19 @@ spark = (
 )
 
 
-print("SparkSession configurée pour MinIO")
+print("=== LECTURE MINIO ===")
+
+df = spark.read.option("multiLine", "true").json("s3a://raw/test/test_minio.json")
+
+
+print("=== SCHEMA ===")
+
+df.printSchema()
+
+
+print("=== DONNEES ===")
+
+df.show()
 
 
 spark.stop()
