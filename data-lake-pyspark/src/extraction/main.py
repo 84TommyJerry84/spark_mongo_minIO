@@ -16,6 +16,12 @@ from src.extraction.load_mongo import (
     get_last_date,
 )
 
+from src.extraction.load_meteo_minio import (
+    upload_meteo_raw,
+)
+
+from src.extraction.load_velov_minio import upload_velov_stations_raw
+
 
 coordonnees = {
     "Albigny-sur-Saône": (45.874994, 4.833002),
@@ -70,19 +76,20 @@ def main():
 
     derniere_date = get_last_date("velov_availabilities")
 
-    # Si aucune disponibilité n'existe,
-    # on récupère les stations.
-    if not derniere_date:
-        print("====== Collect stations Velov ======")
+    print("====== Collect stations Velov ======")
 
-        data = get_velov_stations(url_stations)
+    stations, raw_pages = get_velov_stations(url_stations)
 
-        result = insert_data_to_mongodb(
-            data,
-            "velov_stations",
-        )
+    raw_key = upload_velov_stations_raw(raw_pages)
 
-        print(f"{result} stations insérées")
+    print(f"Raw MinIO stations écrit : {raw_key}")
+
+    result = insert_data_to_mongodb(
+        stations,
+        "velov_stations",
+    )
+
+    print(f"{result} stations insérées")
 
     # ============================================================
     # DATE DE DEBUT
@@ -103,8 +110,8 @@ def main():
     else:
         date_aujourd_hui = date.today()
 
-        print(f"Date de début : {date_debut}")
-        print(f"Date d'aujourd'hui : {date_aujourd_hui}")
+    print(f"Date de début : {date_debut}")
+    print(f"Date d'aujourd'hui : {date_aujourd_hui}")
 
     # ============================================================
     # URL VELOV
@@ -141,12 +148,21 @@ def main():
         for commune, coordinates in coordonnees.items():
             print(f"Collect météo : {commune} | {debut_semaine} → {fin_semaine}")
 
-            data = collect_meteo(
+            data, contenu_csv = collect_meteo(
                 commune,
                 coordinates,
                 str(debut_semaine),
                 str(fin_semaine),
             )
+
+            raw_key = upload_meteo_raw(
+                contenu_csv,
+                commune,
+                str(debut_semaine),
+                str(fin_semaine),
+            )
+
+            print(f"Raw MinIO écrit : {raw_key}")
 
             result = insert_data_to_mongodb(
                 data,

@@ -31,6 +31,8 @@ services:
 
     volumes:
       - mongo_data:/data/db
+
+
   minio:
     image: minio/minio
     container_name: datalake-minio
@@ -47,6 +49,13 @@ services:
       - minio_data:/data
 
     command: server /data --console-address ":9001"
+
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 
   spark-master:
     image: spark:4.1.2-python3
@@ -70,6 +79,8 @@ services:
 
     volumes:
       - ./spark/jobs:/opt/spark/jobs:ro
+      - ./spark/log4j2.properties:/opt/spark/conf/log4j2.properties:ro
+
 
   spark-worker:
     image: spark:4.1.2-python3
@@ -94,6 +105,10 @@ services:
     ports:
       - "8081:8081"
 
+    volumes:
+      - ./spark/log4j2.properties:/opt/spark/conf/log4j2.properties:ro
+
+
   extraction:
     build:
       context: .
@@ -102,6 +117,8 @@ services:
     container_name: datalake-extraction
 
     depends_on:
+      minio:
+        condition: service_healthy
       mongodb:
         condition: service_healthy
 
@@ -111,6 +128,11 @@ services:
       MONGO_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_DATABASE: ${MONGO_DATABASE}
+
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+
 
 volumes:
   mongo_data:

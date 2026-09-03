@@ -15,28 +15,28 @@ mongo_uri = (
 spark = SparkSession.builder.appName("TestRealMongoDB").getOrCreate()
 
 
-availabilities = (
+stations = (
     spark.read.format("mongodb")
     .option("connection.uri", mongo_uri)
     .option("database", "velov_weather")
-    .option("collection", "velov_availabilities")
+    .option("collection", "velov_stations")
     .load()
 )
 
 
 print("====================================")
-print("NB DISPONIBILITES =", availabilities.count())
+print("NB STATIONS =", stations.count())
 print("====================================")
 
-availabilities.select(
-    "horodate",
-    "station_id",
-    "status",
-    "capacity",
-    "bikes_available",
-    "stands_available",
+stations.select(
+    "idstation",
+    "nom",
+    "commune",
+    "lat",
+    "lon",
+    "nbbornettes",
 ).show(5, truncate=False)
 
-availabilities.printSchema()
+stations.printSchema()
 
 spark.stop()

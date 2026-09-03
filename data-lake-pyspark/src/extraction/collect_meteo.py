@@ -92,4 +92,4 @@ def collect_meteo(commune, coordonnees, start_date, end_date):
 
         documents.append(document)
 
-    return documents
+    return documents, contenu_csv

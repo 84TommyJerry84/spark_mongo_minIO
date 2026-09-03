@@ -9,6 +9,7 @@ def get_velov_stations(url):
     start = 1
 
     stations = []
+    raw_pages = []
 
     while True:
         params = {
@@ -19,23 +20,25 @@ def get_velov_stations(url):
         response = requests.get(
             url,
             params=params,
+            timeout=120,
         )
-
         response.raise_for_status()
 
         data = response.json()
+
+        # On conserve la réponse brute de cette page
+        raw_pages.append(data)
+
         values = data.get("values", [])
 
-        # Plus de données -> on arrête
         if not values:
             break
 
         stations.extend(values)
 
-        # On avance de la taille réellement récupérée
         start += len(values)
 
-    return stations
+    return stations, raw_pages
 
 
 def get_velov_availabilities(
