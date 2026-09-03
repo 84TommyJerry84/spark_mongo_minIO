@@ -1,7 +1,7 @@
 import os
 
 from pyspark.sql import SparkSession
-
+from pyspark.sql import functions as F
 
 # --------------------------------------------------
 # 1. Récupération des variables d'environnement
@@ -84,13 +84,67 @@ df_mongo.show()
 
 print("=== JOINTURE MINIO + MONGODB ===")
 
-df_final = df_minio.join(df_mongo, on="station", how="inner")
+df_final = (
+    df_minio.join(df_mongo, on="station", how="inner")
+    # Typage explicite
+    .withColumn("velos", F.col("velos").cast("integer"))
+    .withColumn("capacite", F.col("capacite").cast("integer"))
+    .withColumn("temperature", F.col("temperature").cast("double"))
+    # Nombre de places libres
+    .withColumn("places_libres", F.col("capacite") - F.col("velos"))
+    # Pourcentage de vélos disponibles
+    .withColumn(
+        "taux_disponibilite", F.round((F.col("velos") / F.col("capacite")) * 100, 1)
+    )
+)
+
+df_final = df_final.withColumn(
+    "niveau_disponibilite",
+    F.when(F.col("taux_disponibilite") < 30, "faible").otherwise("correcte"),
+)
 
 df_final.show()
 
+print("=== AGREGATIONS ===")
+
+df_stats = df_final.agg(
+    F.avg("temperature").alias("temperature_moyenne"),
+    F.sum("velos").alias("total_velos"),
+    F.sum("capacite").alias("capacite_totale"),
+    F.avg("taux_disponibilite").alias("taux_moyen"),
+)
+
+df_stats.show()
+
+print("=== STATS PAR NIVEAU DE DISPONIBILITE ===")
+
+df_par_niveau = df_final.groupBy("niveau_disponibilite").agg(
+    F.count("*").alias("nombre_stations"),
+    F.avg("velos").alias("moyenne_velos"),
+    F.avg("temperature").alias("temperature_moyenne"),
+)
+
+df_par_niveau.show()
 
 # --------------------------------------------------
-# 7. Arrêt de Spark
+# 7. Ecriture dans MinIO Analytics
+# --------------------------------------------------
+
+print("=== ECRITURE PARQUET DANS MINIO ANALYTICS ===")
+
+df_final.write.mode("overwrite").parquet("s3a://analytics/stations")
+
+
+print("=== RELECTURE PARQUET ANALYTICS ===")
+
+df_check = spark.read.parquet("s3a://analytics/stations")
+
+df_check.show()
+df_check.printSchema()
+
+
+# --------------------------------------------------
+# 8. Arrêt de Spark
 # --------------------------------------------------
 
 spark.stop()
