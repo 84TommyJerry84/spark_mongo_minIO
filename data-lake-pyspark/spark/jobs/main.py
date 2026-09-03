@@ -331,6 +331,30 @@ df_final.select(
     "wind_speed_10m_kmh",
 ).show(15, truncate=False)
 
+# --------------------------------------------------
+# Contrôle de cohérence capacité / vélos
+# --------------------------------------------------
+
+df_anomalies_capacite = df_final.filter(
+    F.col("capacity").isNull()
+    | F.col("bikes_available").isNull()
+    | (F.col("capacity") <= 0)
+    | (F.col("bikes_available") < 0)
+    | (F.col("bikes_available") > F.col("capacity"))
+)
+
+print(
+    "ANOMALIES CAPACITE / VELOS =",
+    df_anomalies_capacite.count(),
+)
+
+df_final = df_final.filter(
+    F.col("capacity").isNotNull()
+    & F.col("bikes_available").isNotNull()
+    & (F.col("capacity") > 0)
+    & (F.col("bikes_available") >= 0)
+    & (F.col("bikes_available") <= F.col("capacity"))
+)
 
 # --------------------------------------------------
 # 14. indicateur métier

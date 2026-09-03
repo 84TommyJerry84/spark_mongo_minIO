@@ -1,27 +1,22 @@
 """Collect, load et insert data."""
 
-from datetime import date, timedelta
-import time
 import os
-
-from src.extraction.collect_velov import (
-    get_velov_stations,
-    get_velov_availabilities,
-)
+import time
+from datetime import date, timedelta
 
 from src.extraction.collect_meteo import collect_meteo
-
-from src.extraction.load_mongo import (
-    insert_data_to_mongodb,
-    get_last_date,
+from src.extraction.collect_velov import (
+    get_velov_availabilities,
+    get_velov_stations,
 )
-
 from src.extraction.load_meteo_minio import (
     upload_meteo_raw,
 )
-
+from src.extraction.load_mongo import (
+    get_last_date,
+    insert_data_to_mongodb,
+)
 from src.extraction.load_velov_minio import upload_velov_stations_raw
-
 
 coordonnees = {
     "Albigny-sur-Saône": (45.874994, 4.833002),
