@@ -98,7 +98,7 @@ def main():
     elif derniere_date:
         date_debut = date.fromisoformat(derniere_date)
     else:
-        date_debut = date(2023, 1, 1)
+        date_debut = date.today() - timedelta(days=7)
 
     if date_fin_env:
         date_aujourd_hui = date.fromisoformat(date_fin_env)

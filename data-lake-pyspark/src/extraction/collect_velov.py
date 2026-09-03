@@ -84,6 +84,7 @@ def get_velov_availabilities(
             "capacity": main_stands.get("capacity"),
             "bikes_available": availabilities_data.get("bikes"),
             "stands_available": availabilities_data.get("stands"),
+            "raw": item,
         }
 
         availabilities.append(availability)

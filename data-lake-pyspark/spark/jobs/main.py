@@ -14,14 +14,14 @@ minio_secret_key = os.environ["MINIO_SECRET_KEY"]
 mongo_username = quote_plus(os.environ["MONGO_USERNAME"])
 mongo_password = quote_plus(os.environ["MONGO_PASSWORD"])
 
+mongo_database = os.environ["MONGO_DATABASE"]
+
 
 # --------------------------------------------------
 # 2. URI MongoDB
 # --------------------------------------------------
 
-mongo_uri = (
-    f"mongodb://{mongo_username}:{mongo_password}@mongodb:27017/?authSource=admin"
-)
+mongo_uri = f"mongodb://{mongo_username}:{mongo_password}@mongodb:27017/?authSource=admin"
 
 
 # --------------------------------------------------
@@ -62,7 +62,7 @@ spark.sparkContext.setLogLevel("WARN")
 
 # stations = (
 #     spark.read.format("mongodb")
-#     .option("database", "velov_weather")
+#     .option("database", mongo_database)
 #     .option("collection", "velov_stations")
 #     .load()
 # )
@@ -74,14 +74,14 @@ stations = raw_stations.select(F.explode("values").alias("station")).select("sta
 
 availabilities = (
     spark.read.format("mongodb")
-    .option("database", "velov_weather")
+    .option("database", mongo_database)
     .option("collection", "velov_availabilities")
     .load()
 )
 
 meteo = (
     spark.read.format("mongodb")
-    .option("database", "velov_weather")
+    .option("database", mongo_database)
     .option("collection", "lyon_meteo")
     .load()
 )
@@ -99,7 +99,7 @@ availabilities = availabilities.withColumn(
     ),
 )
 
-
+availabilities = availabilities.dropDuplicates(["station_id", "horodate"])
 # --------------------------------------------------
 # 6. Vérification
 # --------------------------------------------------
@@ -257,9 +257,7 @@ df_commune_null.select(
 
 df_velov_ok = df_velov_ok.withColumn(
     "creneau_15min",
-    F.from_unixtime(F.floor(F.unix_timestamp("horodate_ts") / 900) * 900).cast(
-        "timestamp"
-    ),
+    F.from_unixtime(F.floor(F.unix_timestamp("horodate_ts") / 900) * 900).cast("timestamp"),
 )
 
 print("=== ALIGNEMENT TEMPOREL ===")
@@ -422,17 +420,12 @@ quality = df_final.agg(
     F.sum(F.when(F.col("horodate_ts").isNull(), 1).otherwise(0)).alias("horodate_null"),
     F.sum(F.when(F.col("station_nom").isNull(), 1).otherwise(0)).alias("station_null"),
     F.sum(F.when(F.col("commune").isNull(), 1).otherwise(0)).alias("commune_null"),
-    F.sum(F.when(F.col("capacity") <= 0, 1).otherwise(0)).alias(
-        "capacity_non_positive"
-    ),
+    F.sum(F.when(F.col("capacity") <= 0, 1).otherwise(0)).alias("capacity_non_positive"),
     F.sum(F.when(F.col("bikes_available") < 0, 1).otherwise(0)).alias("bikes_negatifs"),
-    F.sum(F.when(F.col("temperature_2m_c").isNull(), 1).otherwise(0)).alias(
-        "meteo_null"
-    ),
+    F.sum(F.when(F.col("temperature_2m_c").isNull(), 1).otherwise(0)).alias("meteo_null"),
     F.sum(
         F.when(
-            (F.col("taux_velos_disponibles") < 0)
-            | (F.col("taux_velos_disponibles") > 100),
+            (F.col("taux_velos_disponibles") < 0) | (F.col("taux_velos_disponibles") > 100),
             1,
         ).otherwise(0)
     ).alias("taux_hors_limites"),

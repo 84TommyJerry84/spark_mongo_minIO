@@ -50,6 +50,7 @@ Le pipeline collecte les stations et disponibilités Vélo'v ainsi que la mété
 ```text
 data-lake-pyspark/
 ├── .env
+├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
 ├── pyproject.toml
@@ -336,15 +337,6 @@ docker compose down
 ```
 
 Ne pas utiliser `docker compose down -v` si les données doivent être conservées.
-
----
-
-## Captures à intégrer avant le rendu
-
-- MinIO : buckets `raw` et `analytics` ;
-- MinIO : partitions Parquet `annee/mois` ;
-- Spark UI : Master + Worker ;
-- éventuellement la sortie du Quality Gate final.
 
 ---
 

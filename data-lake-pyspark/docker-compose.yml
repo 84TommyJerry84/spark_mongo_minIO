@@ -69,6 +69,8 @@ services:
       MONGO_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
 
+      MONGO_DATABASE: ${MONGO_DATABASE}
+
     command:
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.master.Master
