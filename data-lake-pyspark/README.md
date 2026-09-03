@@ -348,6 +348,24 @@ Ne pas utiliser `docker compose down -v` si les données doivent être conservé
 
 ---
 
+## Captures
+
+### MinIO — Zone Analytics
+
+![MinIO Analytics](docs/images/minio-analytics.png)
+
+### MinIO — Partitionnement Parquet
+
+![Partitions Parquet](docs/images/minio-partitions.png)
+
+### Spark UI — Master / Worker
+
+![Spark UI](docs/images/spark-ui.png)
+
+### Quality Gate final
+
+![Quality Gate](docs/images/quality-gate.png)
+
 ## Résultat
 
 Le pipeline complet **API → Landing/Raw → Spark → Analytics** a été validé sur près de **900 000 observations Vélo'v**, avec production de **888 827 lignes Analytics propres** et **56 342 agrégations station / heure**.
