@@ -8,12 +8,29 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
 
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--username",
+          "${MONGO_INITDB_ROOT_USERNAME}",
+          "--password",
+          "${MONGO_INITDB_ROOT_PASSWORD}",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "db.adminCommand('ping')"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
     ports:
       - "${MONGO_PORT}:27017"
 
     volumes:
       - mongo_data:/data/db
-
   minio:
     image: minio/minio
     container_name: datalake-minio
@@ -76,6 +93,24 @@ services:
 
     ports:
       - "8081:8081"
+
+  extraction:
+    build:
+      context: .
+      dockerfile: extraction/Dockerfile
+
+    container_name: datalake-extraction
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+    environment:
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_DATABASE: ${MONGO_DATABASE}
 
 volumes:
   mongo_data:
