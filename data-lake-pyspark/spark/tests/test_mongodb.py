@@ -3,7 +3,6 @@ from urllib.parse import quote_plus
 
 from pyspark.sql import SparkSession
 
-
 mongo_username = quote_plus(os.environ["MONGO_USERNAME"])
 mongo_password = quote_plus(os.environ["MONGO_PASSWORD"])
 

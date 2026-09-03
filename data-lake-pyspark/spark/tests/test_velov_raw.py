@@ -5,7 +5,6 @@ import os
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-
 minio_access_key = os.environ["MINIO_ACCESS_KEY"]
 minio_secret_key = os.environ["MINIO_SECRET_KEY"]
 

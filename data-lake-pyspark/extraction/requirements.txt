@@ -4,3 +4,4 @@ duckdb==1.5.5
 pyarrow==25.0.1
 pymongo==4.17.0
 requests==2.34.2
+ruff==0.12.12

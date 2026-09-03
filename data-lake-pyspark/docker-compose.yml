@@ -79,6 +79,7 @@ services:
 
     volumes:
       - ./spark/jobs:/opt/spark/jobs:ro
+      - ./spark/tests:/opt/spark/tests:ro
       - ./spark/log4j2.properties:/opt/spark/conf/log4j2.properties:ro
 
 
