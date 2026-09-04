@@ -2,7 +2,7 @@
 
 ## Présentation
 
-Ce projet met en place un **Data Lake local conteneurisé** pour collecter et croiser des données de mobilité Vélo'v avec des données météorologiques.
+Ce projet met en place un **Data Lake local conteneurisé** permettant de collecter et de croiser des données de mobilité Vélo'v avec des données météorologiques.
 
 Technologies utilisées :
 
@@ -12,7 +12,7 @@ Technologies utilisées :
 - **Python** : ingestion des APIs ;
 - **Docker Compose** : orchestration des services.
 
-Le pipeline collecte les stations et disponibilités Vélo'v ainsi que la météo, puis Spark nettoie, joint, contrôle et écrit les données finales au format **Parquet partitionné**.
+Le pipeline collecte les stations et les disponibilités Vélo'v ainsi que les données météo. Spark nettoie ensuite les données, effectue les jointures, contrôle leur qualité et écrit les résultats au format **Parquet partitionné**.
 
 ---
 
@@ -33,14 +33,14 @@ Le pipeline collecte les stations et disponibilités Vélo'v ainsi que la mété
              └─────────┬─────────┘
                        ▼
                  Cluster Spark
-              Master + Worker
+               Master + Worker
                        │
           nettoyage / jointures
           qualité / agrégations
                        │
                        ▼
                 MinIO Analytics
-                 Parquet annee/mois
+              Parquet annee/mois
 ```
 
 ---
@@ -55,14 +55,14 @@ velov-weather-pipeline/
 ├── docker-compose.yml
 ├── pyproject.toml
 ├── README.md
-|
-|── docs/
+│
+├── docs/
 │   └── images/
 │       ├── minio-analytics.png
 │       ├── minio-partitions.png
 │       ├── quality-gate.png
 │       └── spark-ui.png
-|
+│
 ├── extraction/
 │   ├── Dockerfile
 │   └── requirements.txt
@@ -100,7 +100,9 @@ Aucune installation locale de Spark, MongoDB ou MinIO n'est nécessaire.
 
 ## Configuration
 
-Créer un fichier `.env` à la racine avec les variables utilisées par `docker-compose.yml` :
+Créer un fichier `.env` à la racine du projet à partir des variables présentes dans `.env.example`.
+
+Exemple :
 
 ```env
 MONGO_INITDB_ROOT_USERNAME=...
@@ -117,35 +119,64 @@ SPARK_MASTER_PORT=7077
 SPARK_MASTER_WEBUI_PORT=8080
 ```
 
-Le fichier `.env` est ignoré par Git.
+Le fichier `.env` contient les valeurs locales et les secrets. Il est ignoré par Git.
+
+Le fichier `.env.example` est versionné et indique les variables nécessaires sans contenir de véritables identifiants.
 
 ---
 
 ## Démarrage
 
-Construire le service d'extraction :
+### Construire le service d'extraction
 
 ```powershell
 docker compose build extraction
 ```
 
-Démarrer MongoDB, MinIO et le cluster Spark :
+### Démarrer l'infrastructure
 
 ```powershell
 docker compose up -d mongodb minio spark-master spark-worker
 ```
 
-Vérifier les services :
+Vérifier l'état des services :
 
 ```powershell
 docker compose ps
 ```
 
-Interfaces :
+Interfaces disponibles :
 
 ```text
 MinIO Console : http://localhost:9001
 Spark Master  : http://localhost:8080
+```
+
+---
+
+## Initialisation de MinIO
+
+Lors du premier lancement, ouvrir la console MinIO :
+
+```text
+http://localhost:9001
+```
+
+Créer les deux buckets suivants :
+
+```text
+raw
+analytics
+```
+
+Le bucket `raw` reçoit les données brutes collectées.
+
+Le bucket `analytics` reçoit les fichiers Parquet produits par Spark.
+
+Cette étape doit être refaite si les volumes Docker sont supprimés avec :
+
+```powershell
+docker compose down -v
 ```
 
 ---
@@ -158,22 +189,30 @@ Exemple de collecte sur 7 jours :
 docker compose run --rm -e EXTRACTION_START_DATE=2026-08-27 -e EXTRACTION_END_DATE=2026-09-02 extraction
 ```
 
-Les données sont réparties entre :
+Sans dates fournies, le pipeline reprend à partir de la dernière date présente dans MongoDB ou collecte les 7 derniers jours si la base est vide.
+
+Les données sont réparties entre MongoDB et MinIO.
+
+### MongoDB Landing
 
 ```text
 MongoDB / velov_weather
 ├── velov_stations
 ├── velov_availabilities
 └── lyon_meteo
+```
 
-MinIO / raw
+### MinIO Raw
+
+```text
+raw/
 ├── velov/stations/
 └── meteo/
 ```
 
 Les insertions MongoDB utilisent des **upserts** afin d'éviter les doublons lors d'une nouvelle collecte.
 
-Le backfill final contient :
+Le backfill utilisé pour valider le pipeline contient :
 
 ```text
 890 120 disponibilités Vélo'v
@@ -183,7 +222,7 @@ Le backfill final contient :
 
 ## Traitement PySpark
 
-Le job principal est :
+Le job principal se trouve dans :
 
 ```text
 spark/jobs/main.py
@@ -191,22 +230,25 @@ spark/jobs/main.py
 
 Il lit :
 
-- le référentiel stations depuis **MinIO Raw** ;
+- le référentiel des stations depuis **MinIO Raw** ;
 - les disponibilités Vélo'v depuis **MongoDB** ;
 - les données météo depuis **MongoDB**.
 
-Il effectue notamment :
+Le traitement effectue notamment :
 
-- typage et nettoyage ;
-- jointure disponibilités / stations ;
-- alignement temporel sur 15 minutes ;
-- jointure Vélo'v / météo ;
-- calcul du taux de disponibilité ;
-- contrôles qualité ;
-- agrégation station / heure ;
-- écriture Parquet partitionnée.
+- le typage des colonnes ;
+- le nettoyage des données ;
+- la suppression des doublons ;
+- la jointure disponibilités / stations ;
+- l'alignement temporel sur des intervalles de 15 minutes ;
+- la jointure Vélo'v / météo ;
+- le contrôle des valeurs incohérentes ;
+- le calcul du taux de disponibilité ;
+- les contrôles qualité ;
+- l'agrégation station / heure ;
+- l'écriture des résultats au format Parquet partitionné.
 
-### Exécution
+### Exécution du job Spark
 
 ```powershell
 docker compose exec spark-master /opt/spark/bin/spark-submit --conf spark.jars.ivy=/tmp/.ivy2 --packages org.apache.hadoop:hadoop-aws:3.4.2,org.mongodb.spark:mongo-spark-connector_2.13:11.1.0 --master spark://spark-master:7077 /opt/spark/jobs/main.py
@@ -216,7 +258,7 @@ docker compose exec spark-master /opt/spark/bin/spark-submit --conf spark.jars.i
 
 ## Quality Gate
 
-Avant publication, Spark contrôle notamment :
+Avant publication dans la zone Analytics, Spark contrôle notamment :
 
 ```text
 horodate manquant
@@ -228,7 +270,7 @@ météo manquante
 taux de disponibilité hors 0–100 %
 ```
 
-Résultat final :
+Résultats obtenus :
 
 ```text
 Lignes MongoDB                  : 890 120
@@ -243,13 +285,13 @@ Agrégations station / heure     : 56 342
 Quality Gate final :
 
 ```text
-horodate_null          = 0
-station_null           = 0
-commune_null           = 0
-capacity_non_positive  = 0
-bikes_negatifs         = 0
-meteo_null             = 0
-taux_hors_limites      = 0
+horodate_null           = 0
+station_null            = 0
+commune_null            = 0
+capacity_non_positive   = 0
+bikes_negatifs          = 0
+meteo_null              = 0
+taux_hors_limites       = 0
 ```
 
 ---
@@ -264,7 +306,7 @@ analytics/
 └── velov_meteo_station_heure/
 ```
 
-Les fichiers sont au format **Parquet** et partitionnés par :
+Les fichiers sont stockés au format **Parquet** et partitionnés par :
 
 ```text
 annee
@@ -280,11 +322,13 @@ analytics/velov_meteo/
     └── mois=9/
 ```
 
+Le partitionnement permet de limiter les données à parcourir lorsqu'un traitement porte seulement sur une période donnée.
+
 ---
 
 ## Tests
 
-Tests techniques disponibles :
+Deux tests techniques sont disponibles :
 
 ```text
 spark/tests/
@@ -292,13 +336,13 @@ spark/tests/
 └── test_velov_raw.py
 ```
 
-### MongoDB
+### Test MongoDB
 
 ```powershell
 docker compose exec spark-master /opt/spark/bin/spark-submit --conf spark.jars.ivy=/tmp/.ivy2 --packages org.mongodb.spark:mongo-spark-connector_2.13:11.1.0 --master spark://spark-master:7077 /opt/spark/tests/test_mongodb.py
 ```
 
-### MinIO Raw
+### Test MinIO Raw
 
 ```powershell
 docker compose exec spark-master /opt/spark/bin/spark-submit --conf spark.jars.ivy=/tmp/.ivy2 --packages org.apache.hadoop:hadoop-aws:3.4.2 --master spark://spark-master:7077 /opt/spark/tests/test_velov_raw.py
@@ -308,7 +352,15 @@ docker compose exec spark-master /opt/spark/bin/spark-submit --conf spark.jars.i
 
 ## Qualité du code
 
-Le projet utilise **Ruff 0.12.12**.
+Le projet utilise **Ruff 0.12.12** pour le formatage et le contrôle du code Python.
+
+### Formatage
+
+```powershell
+docker compose run --rm --no-deps -v "${PWD}:/workspace" -w /workspace extraction python -m ruff format src spark/jobs spark/tests
+```
+
+### Vérification
 
 ```powershell
 docker compose run --rm --no-deps -v "${PWD}:/workspace" -w /workspace extraction python -m ruff check src spark/jobs spark/tests
@@ -320,7 +372,7 @@ Résultat obtenu :
 All checks passed!
 ```
 
-Validation du fichier Compose :
+Validation du fichier Docker Compose :
 
 ```powershell
 docker compose config --quiet
@@ -343,7 +395,15 @@ Pour arrêter les services sans supprimer les données :
 docker compose down
 ```
 
-Ne pas utiliser `docker compose down -v` si les données doivent être conservées.
+Les volumes sont conservés et les données restent disponibles au prochain démarrage.
+
+Pour supprimer également les volumes :
+
+```powershell
+docker compose down -v
+```
+
+Attention : cette commande supprime les données MongoDB ainsi que les buckets et objets MinIO.
 
 ---
 
@@ -365,6 +425,29 @@ Ne pas utiliser `docker compose down -v` si les données doivent être conservé
 
 ![Quality Gate](docs/images/quality-gate.png)
 
+---
+
 ## Résultat
 
-Le pipeline complet **API → Landing/Raw → Spark → Analytics** a été validé sur près de **900 000 observations Vélo'v**, avec production de **888 827 lignes Analytics propres** et **56 342 agrégations station / heure**.
+Le pipeline complet :
+
+```text
+API
+ ↓
+Landing / Raw
+ ↓
+Spark
+ ↓
+Analytics
+```
+
+a été validé sur près de **900 000 observations Vélo'v**.
+
+Le traitement final produit :
+
+```text
+888 827 lignes Analytics propres
+56 342 agrégations station / heure
+```
+
+Le projet permet ainsi de collecter, stocker, traiter et analyser conjointement les données de mobilité Vélo'v et les données météorologiques dans une architecture Data Lake conteneurisée.
