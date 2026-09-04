@@ -1,4 +1,4 @@
-"""Collecter la data du meteo à Lyon et les communes voisines."""
+"""Collecter les données météo à Lyon et dans les communes voisines."""
 
 import csv
 import io
@@ -7,11 +7,11 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from src.config.settings import OPEN_METEO_URL, TIMEZONE
+
 
 def collect_meteo(commune, coordonnees, start_date, end_date):
     """Collecte les données météo pour Lyon et les communes voisines."""
-
-    url = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 
     variables_meteo = (
         "temperature_2m,"
@@ -33,12 +33,12 @@ def collect_meteo(commune, coordonnees, start_date, end_date):
         "start_date": start_date,
         "end_date": end_date,
         "minutely_15": variables_meteo,
-        "timezone": "Europe/Paris",
+        "timezone": TIMEZONE,
         "format": "csv",
     }
 
     response = requests.get(
-        url,
+        OPEN_METEO_URL,
         params=params,
         timeout=120,
     )
@@ -74,9 +74,7 @@ def collect_meteo(commune, coordonnees, start_date, end_date):
                     coordonnees[0],
                 ],
             },
-            "datetime": datetime.fromisoformat(ligne["time"]).replace(
-                tzinfo=ZoneInfo("Europe/Paris")
-            ),
+            "datetime": datetime.fromisoformat(ligne["time"]).replace(tzinfo=ZoneInfo(TIMEZONE)),
             "temperature_2m_c": float(ligne["temperature_2m (°C)"]),
             "relative_humidity_2m_pct": int(ligne["relative_humidity_2m (%)"]),
             "apparent_temperature_c": float(ligne["apparent_temperature (°C)"]),

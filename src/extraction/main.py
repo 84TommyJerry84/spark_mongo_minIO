@@ -4,14 +4,16 @@ import os
 import time
 from datetime import date, timedelta
 
+from src.config.settings import (
+    VELOV_AVAILABILITIES_URL,
+    VELOV_STATIONS_URL,
+)
 from src.extraction.collect_meteo import collect_meteo
 from src.extraction.collect_velov import (
     get_velov_availabilities,
     get_velov_stations,
 )
-from src.extraction.load_meteo_minio import (
-    upload_meteo_raw,
-)
+from src.extraction.load_meteo_minio import upload_meteo_raw
 from src.extraction.load_mongo import (
     get_last_date,
     insert_data_to_mongodb,
@@ -58,22 +60,17 @@ coordonnees = {
 
 
 def main():
-    """Fonction main."""
+    """Lance la collecte et le stockage des données."""
 
     # ============================================================
     # STATIONS VELOV
     # ============================================================
 
-    url_stations = (
-        "https://data.grandlyon.com/fr/datapusher/ws/"
-        "grandlyon/pvo_patrimoine_voirie.pvostationvelov/all.json"
-    )
-
     derniere_date = get_last_date("velov_availabilities")
 
     print("====== Collect stations Velov ======")
 
-    stations, raw_pages = get_velov_stations(url_stations)
+    stations, raw_pages = get_velov_stations(VELOV_STATIONS_URL)
 
     raw_key = upload_velov_stations_raw(raw_pages)
 
@@ -109,15 +106,10 @@ def main():
     print(f"Date d'aujourd'hui : {date_aujourd_hui}")
 
     # ============================================================
-    # URL VELOV
+    # PARAMETRES VELOV
     # ============================================================
 
     maxfeatures = 10000
-
-    url_availabilities = (
-        "https://data.grandlyon.com/fr/datapusher/ws/"
-        "timeseries/jcd_jcdecaux.historiquevelov/all.json"
-    )
 
     # ============================================================
     # RÉCUPÉRATION SEMAINE PAR SEMAINE
@@ -181,7 +173,7 @@ def main():
 
         while True:
             data = get_velov_availabilities(
-                url_availabilities,
+                VELOV_AVAILABILITIES_URL,
                 maxfeatures,
                 start,
                 str(debut_semaine),

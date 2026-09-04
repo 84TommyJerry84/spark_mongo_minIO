@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 
 import boto3
 
+from src.config.settings import MINIO_ENDPOINT, MINIO_RAW_BUCKET
+
 
 def upload_meteo_raw(
     contenu_csv,
@@ -16,7 +18,7 @@ def upload_meteo_raw(
 
     s3 = boto3.client(
         "s3",
-        endpoint_url=os.environ["MINIO_ENDPOINT"],
+        endpoint_url=MINIO_ENDPOINT,
         aws_access_key_id=os.environ["MINIO_ACCESS_KEY"],
         aws_secret_access_key=os.environ["MINIO_SECRET_KEY"],
     )
@@ -34,7 +36,7 @@ def upload_meteo_raw(
     )
 
     s3.put_object(
-        Bucket="raw",
+        Bucket=MINIO_RAW_BUCKET,
         Key=object_key,
         Body=contenu_csv.encode("utf-8"),
         ContentType="text/csv; charset=utf-8",
