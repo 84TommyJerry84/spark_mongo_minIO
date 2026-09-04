@@ -1,3 +1,4 @@
+name: data-lake-pyspark
 services:
 
   mongodb:
