@@ -48,14 +48,21 @@ Le pipeline collecte les stations et disponibilités Vélo'v ainsi que la mété
 ## Structure du projet
 
 ```text
-data-lake-pyspark/
+velov-weather-pipeline/
 ├── .env
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
 ├── pyproject.toml
 ├── README.md
-│
+|
+|── docs/
+│   └── images/
+│       ├── minio-analytics.png
+│       ├── minio-partitions.png
+│       ├── quality-gate.png
+│       └── spark-ui.png
+|
 ├── extraction/
 │   ├── Dockerfile
 │   └── requirements.txt

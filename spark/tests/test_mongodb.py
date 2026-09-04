@@ -6,9 +6,7 @@ from pyspark.sql import SparkSession
 mongo_username = quote_plus(os.environ["MONGO_USERNAME"])
 mongo_password = quote_plus(os.environ["MONGO_PASSWORD"])
 
-mongo_uri = (
-    f"mongodb://{mongo_username}:{mongo_password}@mongodb:27017/?authSource=admin"
-)
+mongo_uri = f"mongodb://{mongo_username}:{mongo_password}@mongodb:27017/?authSource=admin"
 
 
 spark = SparkSession.builder.appName("TestRealMongoDB").getOrCreate()

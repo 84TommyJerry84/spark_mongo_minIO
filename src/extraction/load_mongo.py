@@ -52,9 +52,7 @@ def insert_data_to_mongodb(data, collection_name):
             filtre = {key: document.get(key) for key in keys}
 
             if any(value is None for value in filtre.values()):
-                raise ValueError(
-                    f"Clé unique manquante pour {collection_name}: {filtre}"
-                )
+                raise ValueError(f"Clé unique manquante pour {collection_name}: {filtre}")
 
             operations.append(
                 UpdateOne(
